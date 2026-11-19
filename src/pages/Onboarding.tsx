@@ -153,7 +153,7 @@ export function Onboarding({ onThemeChange }: { onThemeChange: (theme: 'dark' | 
           <div className="onboarding-fields-grid">
             <label className="onboarding-field"><span>Preferred currency</span><select {...register('preferredCurrency')}>{currencyOptions.map(([code, name]) => <option key={code} value={code}>{code} — {name}</option>)}</select></label>
             <label className="onboarding-field"><span>Theme</span><select {...register('theme')}><option value="dark">Dark</option><option value="light">Light</option></select></label>
-            <label className="onboarding-field full-width"><span>Main goals <small>Optional · one per line</small></span><textarea rows={3} placeholder={'Get more consistent with study\nMake time for exercise'} {...register('mainGoals')} />{errors.mainGoals && <small className="field-error">{errors.mainGoals.message}</small>}</label>
+            <label className="onboarding-field full-width"><span>Main goals <small>Optional · one per line</small></span><textarea rows={3} placeholder="Add one goal per line" {...register('mainGoals')} />{errors.mainGoals && <small className="field-error">{errors.mainGoals.message}</small>}</label>
           </div>
 
           <div className="onboarding-actions">

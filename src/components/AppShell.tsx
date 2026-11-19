@@ -12,7 +12,7 @@ import {
   Sun,
   X,
 } from 'lucide-react'
-import { navigationGroups, utilityNavigation } from '../data/demo'
+import { navigationGroups, utilityNavigation } from '../data/navigation'
 import { useAuth } from '../contexts/useAuth'
 
 type AppShellProps = {
@@ -88,7 +88,6 @@ export function AppShell({ theme, onToggleTheme }: AppShellProps) {
               <NavLink key={path} to={path} onClick={closeSidebar} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                 <Icon size={17} strokeWidth={1.8} />
                 <span>{label}</span>
-                {label === 'AI Life Coach' && <span className="ai-pill">NEW</span>}
               </NavLink>
             ))}
           </div>
@@ -97,9 +96,9 @@ export function AppShell({ theme, onToggleTheme }: AppShellProps) {
         <div className="sidebar-bottom">
           <div className="coach-card">
             <div className="coach-sparkle"><Sparkles size={16} /></div>
-            <strong>A little guidance?</strong>
-            <p>Your AI coach can help you plan a more balanced week.</p>
-            <NavLink to="/ai-coach" onClick={closeSidebar}>Talk to your coach <span>↗</span></NavLink>
+            <strong>Make time to reflect</strong>
+            <p>Write a private weekly review and decide what matters next.</p>
+            <NavLink to="/review" onClick={closeSidebar}>Open weekly review <span>↗</span></NavLink>
           </div>
           <div className="profile-actions">
             <NavLink to="/settings" className="profile-button">
@@ -155,7 +154,7 @@ export function AppShell({ theme, onToggleTheme }: AppShellProps) {
               {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
             </button>
             <button className="icon-button notification-button" aria-label="View notifications" onClick={() => navigate('/notifications')}>
-              <Bell size={17} /><span className="notification-dot" />
+              <Bell size={17} />
             </button>
             <button className="topbar-create button button-primary" onClick={() => navigate('/planner')}><Plus size={16} /><span>Quick add</span></button>
           </div>

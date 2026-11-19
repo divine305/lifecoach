@@ -81,7 +81,7 @@ function App() {
           <Route path="onboarding" element={<OnboardingPage onThemeChange={setAppTheme} />} />
           <Route element={<AppShell theme={theme} onToggleTheme={toggleTheme} />}>
             <Route path="dashboard" element={<Dashboard />} />
-            <Route path="*" element={<ModulePage />} />
+            <Route path="*" element={<ModulePage onThemeChange={setAppTheme} />} />
           </Route>
         </Route>
       </Routes>

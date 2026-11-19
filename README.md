@@ -1,6 +1,6 @@
 # LifeOS
 
-LifeOS is a student productivity workspace. The frontend foundation includes responsive marketing and dashboard views, shared navigation, and a dark/light theme. Supabase authentication, profile onboarding, and the initial database schema are now wired for Phase 2.
+LifeOS is a student productivity workspace built with React, TypeScript, and Supabase. Signed-in users can manage their own tasks, calendar, coursework, focus sessions, habits, goals, finances, notes, reminders, and preferences.
 
 ## Run locally
 
@@ -25,18 +25,20 @@ npm run build
 - `/` — responsive LifeOS landing page.
 - `/register`, `/login`, `/forgot-password`, and `/reset-password` — Supabase email/password auth, email verification support, and recovery flow.
 - `/onboarding` — authenticated student profile and preferences setup. Optional academic details can be skipped.
-- Protected application routes — require a valid session and completed onboarding.
-- `/dashboard` — dashboard layout with clearly labeled sample data; task interactions remain local preview behavior and are not persisted.
-- Theme preference — dark/light toggle saved locally and to the user's preferences.
+- `/dashboard` — account-derived task, schedule, focus, grade, goal, and activity summaries; dashboard task actions persist to Supabase.
+- Protected application routes — planner, calendar, courses, assignments, exams, grades, focus timer, habits and daily completions, goals and milestones, manual finances, notes, in-app reminders, analytics, settings, and a private weekly review.
+- User records are stored in Supabase and queried by authenticated user; database row-level security is enabled for user-owned data.
+- Entries are manual. There is no bank sync, Google Calendar sync, generated AI response, email reminder, or push notification integration.
+- Theme and profile preferences are saved to the user's account; the theme is also cached locally.
 
 ## Supabase setup
 
 1. Create a Supabase project and copy its project URL and anon/publishable key into `.env.local` using the names in `.env.example`. The frontend key is public; never put a service-role key in a `VITE_*` variable.
-2. Apply `supabase/migrations/20261119140000_initial_schema.sql` to that project. With the Supabase CLI installed, run `npx supabase init` if this checkout has no `supabase/config.toml`, then `npx supabase login`, `npx supabase link --project-ref <project-ref>`, and `npx supabase db push`.
+2. Apply `supabase/migrations/20261119140000_initial_schema.sql` once to a new project. If the schema is already present, do not run the SQL again; use the Supabase CLI migration workflow for future schema changes. With the CLI installed, run `npx supabase init` if this checkout has no `supabase/config.toml`, then `npx supabase login`, `npx supabase link --project-ref <project-ref>`, and `npx supabase db push`.
 3. In Supabase Authentication settings, set the Site URL to your frontend origin and allow redirects to `<frontend-origin>/onboarding` and `<frontend-origin>/reset-password`.
 4. Restart Vite after changing environment variables.
 
-The migration creates profiles, preferences, and the core LifeOS tables; enables RLS for every user-owned table; constrains related rows to the same owner; and creates profile/preferences rows when an auth user is registered. Live authentication/database behavior still needs to be verified against a configured Supabase project.
+The migration creates profiles, preferences, and the LifeOS tables; enables RLS for every user-owned table; constrains related rows to the same owner; and creates profile/preferences rows when an auth user is registered. Build and lint checks do not replace testing against your configured Supabase project.
 
 ## Deploy on Netlify
 
