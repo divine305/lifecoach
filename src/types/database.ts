@@ -28,6 +28,20 @@ export type UserPreferencesRow = {
   updated_at: string
 }
 
+export type TaskRow = {
+  id: string
+  user_id: string
+  course_id: string | null
+  title: string
+  description: string | null
+  status: 'todo' | 'in_progress' | 'completed' | 'cancelled'
+  priority: number
+  due_at: string | null
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 type TableShape<Row> = {
   Row: Row
   Insert: Partial<Row>
@@ -40,6 +54,7 @@ export type Database = {
     Tables: {
       profiles: TableShape<ProfileRow>
       user_preferences: TableShape<UserPreferencesRow>
+      tasks: TableShape<TaskRow>
     }
     Views: Record<string, never>
     Functions: {

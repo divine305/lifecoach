@@ -1,19 +1,62 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, CircleHelp, Clock3, Plus, Sparkles, Target, TrendingUp } from 'lucide-react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth'
-import { initialTasks, upcomingEvents, weekActivity } from '../data/demo'
+import { supabase } from '../lib/supabase'
+import { upcomingEvents, weekActivity } from '../data/demo'
+import type { TaskRow } from '../types/database'
 
-type Task = (typeof initialTasks)[number]
+function getTaskErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+    return error.message
+  }
+  return 'An unexpected task error occurred.'
+}
+
+function formatDueDate(dueAt: string | null) {
+  if (!dueAt) return 'No due date'
+  const date = new Date(dueAt)
+  if (Number.isNaN(date.getTime())) return 'Due date unavailable'
+
+  const today = new Date()
+  const isToday = date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  const formattedDate = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(date)
+  return isToday ? 'Due today' : `Due ${formattedDate}`
+}
+
+type TaskLoadState = {
+  userId: string
+  status: 'loading' | 'ready' | 'error'
+  message?: string
+}
 
 export function Dashboard() {
   const { profile, user } = useAuth()
-  const [tasks, setTasks] = useState<Task[]>(initialTasks)
+  const [taskRecords, setTaskRecords] = useState<{ userId: string; tasks: TaskRow[] }>({ userId: '', tasks: [] })
+  const [taskLoad, setTaskLoad] = useState<TaskLoadState>({ userId: '', status: 'loading' })
+  const [taskActionError, setTaskActionError] = useState<string | null>(null)
+  const [savingTask, setSavingTask] = useState(false)
+  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null)
+  const [reloadTasks, setReloadTasks] = useState(0)
   const [showAddTask, setShowAddTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
-  const doneCount = useMemo(() => tasks.filter((task) => task.done).length, [tasks])
+  const userId = user?.id
+  const tasks = taskRecords.userId === userId ? taskRecords.tasks : []
+  const tasksLoading = Boolean(userId) && (taskLoad.userId !== userId || taskLoad.status === 'loading')
+  const taskLoadError = !supabase
+    ? 'Supabase is not configured.'
+    : !userId
+      ? 'Sign in to load your tasks.'
+      : taskLoad.userId === userId && taskLoad.status === 'error'
+        ? taskLoad.message ?? 'Could not load tasks.'
+        : null
+  const doneCount = tasks.filter((task) => task.status === 'completed').length
   const [dayContext] = useState(() => {
     const now = new Date()
     return {
@@ -24,14 +67,98 @@ export function Dashboard() {
   const greeting = dayContext.hour < 12 ? 'Good morning' : dayContext.hour < 18 ? 'Good afternoon' : 'Good evening'
   const studentName = profile?.full_name || user?.email?.split('@')[0] || 'Student'
 
-  const toggleTask = (id: number) => setTasks((current) => current.map((task) => task.id === id ? { ...task, done: !task.done } : task))
-  const addTask = (event: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    let active = true
+    if (!supabase || !userId) return () => { active = false }
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('user_id', userId)
+          .neq('status', 'cancelled')
+          .order('due_at', { ascending: true, nullsFirst: false })
+        if (error) throw error
+        if (active) {
+          setTaskRecords({ userId, tasks: data ?? [] })
+          setTaskLoad({ userId, status: 'ready' })
+        }
+      } catch (error: unknown) {
+        if (active) setTaskLoad({ userId, status: 'error', message: getTaskErrorMessage(error) })
+      }
+    })()
+
+    return () => { active = false }
+  }, [userId, reloadTasks])
+
+  const toggleTask = async (task: TaskRow) => {
+    if (!supabase || !userId) {
+      setTaskActionError('Sign in to update tasks.')
+      return
+    }
+    const isComplete = task.status === 'completed'
+    setUpdatingTaskId(task.id)
+    setTaskActionError(null)
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update({
+          status: isComplete ? 'todo' : 'completed',
+          completed_at: isComplete ? null : new Date().toISOString(),
+        })
+        .eq('id', task.id)
+        .eq('user_id', userId)
+        .select('*')
+        .single()
+      if (error) throw error
+      setTaskRecords((current) => current.userId === userId
+        ? { ...current, tasks: current.tasks.map((currentTask) => currentTask.id === task.id ? data : currentTask) }
+        : current)
+    } catch (error: unknown) {
+      setTaskActionError(getTaskErrorMessage(error))
+    } finally {
+      setUpdatingTaskId(null)
+    }
+  }
+
+  const addTask = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const title = newTaskTitle.trim()
     if (!title) return
-    setTasks((current) => [...current, { id: Date.now(), title, course: 'Personal task', time: 'Added just now', done: false, color: 'violet' }])
-    setNewTaskTitle('')
-    setShowAddTask(false)
+    if (taskLoadError) {
+      setTaskActionError('Retry loading your tasks before adding a new one.')
+      return
+    }
+    if (!supabase || !userId) {
+      setTaskActionError('Sign in to add tasks.')
+      return
+    }
+
+    setSavingTask(true)
+    setTaskActionError(null)
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert({ user_id: userId, title })
+        .select('*')
+        .single()
+      if (error) throw error
+      setTaskRecords((current) => current.userId === userId
+        ? { ...current, tasks: [...current.tasks, data] }
+        : { userId, tasks: [data] })
+      setNewTaskTitle('')
+      setShowAddTask(false)
+    } catch (error: unknown) {
+      setTaskActionError(getTaskErrorMessage(error))
+    } finally {
+      setSavingTask(false)
+    }
+  }
+
+  const retryTaskLoad = () => {
+    if (!userId) return
+    setTaskLoad({ userId, status: 'loading' })
+    setReloadTasks((count) => count + 1)
   }
 
   return (
@@ -41,10 +168,10 @@ export function Dashboard() {
         <span className="button button-quiet week-select">This week</span>
       </div>
 
-      <div className="demo-banner"><Sparkles size={14} /><span><b>Preview mode</b> — This dashboard is showing sample information. Your account is active; personal tasks and schedules will connect in upcoming feature phases.</span><span aria-label="About demo data" title="This dashboard is populated with sample information."><CircleHelp size={15} /></span></div>
+      <div className="demo-banner"><Sparkles size={14} /><span><b>Partly live</b> — Tasks are saved to your account. Other dashboard stats, charts, schedule, and coach content are sample data.</span><span aria-label="About sample data" title="Only tasks on this dashboard currently use your personal data."><CircleHelp size={15} /></span></div>
 
       <div className="stat-grid">
-        <motion.article className="stat-card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 }}><div className="stat-top"><span>Tasks completed</span><span className="stat-icon violet"><Check size={17} /></span></div><div className="stat-value">{doneCount}<small> / {tasks.length + 15}</small></div><div className="stat-foot"><span className="trend-positive"><TrendingUp size={13} /> 12%</span><span>vs. last week</span><div className="stat-sparkline spark-violet"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></div></div></motion.article>
+        <motion.article className="stat-card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 }}><div className="stat-top"><span>Tasks completed</span><span className="stat-icon violet"><Check size={17} /></span></div><div className="stat-value">{tasksLoading ? '—' : doneCount}<small> / {tasksLoading ? '—' : tasks.length}</small></div><div className="stat-foot"><span className="trend-neutral">Live data</span><span>from your task list</span></div></motion.article>
         <motion.article className="stat-card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}><div className="stat-top"><span>Focus time</span><span className="stat-icon blue"><Clock3 size={17} /></span></div><div className="stat-value">14.5<small> hrs</small></div><div className="stat-foot"><span className="trend-positive"><TrendingUp size={13} /> 8%</span><span>vs. last week</span><div className="stat-sparkline spark-blue"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></div></div></motion.article>
         <motion.article className="stat-card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.13 }}><div className="stat-top"><span>Current GPA</span><span className="stat-icon orange"><Target size={17} /></span></div><div className="stat-value">3.82<small> / 4.0</small></div><div className="stat-foot"><span className="trend-positive"><TrendingUp size={13} /> 0.14</span><span>this semester</span><div className="stat-sparkline spark-orange"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></div></div></motion.article>
         <motion.article className="stat-card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}><div className="stat-top"><span>Weekly rhythm</span><span className="stat-icon green"><Sparkles size={17} /></span></div><div className="stat-value">78<small> / 100</small></div><div className="stat-foot"><span className="trend-neutral"><ArrowUpRight size={13} /> Good pace</span><span>keep it balanced</span><div className="rhythm-track"><i /></div></div></motion.article>
@@ -72,15 +199,26 @@ export function Dashboard() {
         </section>
 
         <section className="panel tasks-panel">
-          <div className="panel-heading"><div><h2>Today's priorities</h2><p>{doneCount} of {tasks.length} done <span className="task-progress-inline"><i style={{ width: `${tasks.length ? (doneCount / tasks.length) * 100 : 0}%` }} /></span></p></div><button className="icon-button small-icon" aria-label="Add task" onClick={() => setShowAddTask(true)}><Plus size={17} /></button></div>
-          <div className="task-list">{tasks.map((task) => <label key={task.id} className={`task-row ${task.done ? 'task-done' : ''}`}><input type="checkbox" checked={task.done} onChange={() => toggleTask(task.id)} /><span className={`custom-check ${task.done ? 'checked' : ''}`}>{task.done && <Check size={12} />}</span><span className={`task-color ${task.color}`} /><span className="task-copy"><strong>{task.title}</strong><small>{task.course}</small></span><span className={`task-time ${task.time === 'Due today' ? 'due-today' : ''}`}>{task.time}</span></label>)}</div>
-          {showAddTask && <form className="add-task-form" onSubmit={addTask}><input autoFocus value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} placeholder="What needs doing?" aria-label="New task title" /><button type="submit" className="icon-button" aria-label="Save task"><Check size={16} /></button><button type="button" className="icon-button" aria-label="Cancel" onClick={() => setShowAddTask(false)}>×</button></form>}
+          <div className="panel-heading"><div><h2>Your tasks</h2><p>{tasksLoading ? 'Loading your tasks…' : `${doneCount} of ${tasks.length} done`} {!tasksLoading && tasks.length > 0 && <span className="task-progress-inline"><i style={{ width: `${(doneCount / tasks.length) * 100}%` }} /></span>}</p></div><button className="icon-button small-icon" aria-label="Add task" onClick={() => setShowAddTask(true)}><Plus size={17} /></button></div>
+          <div className="task-list">
+            {tasksLoading && <p className="task-feedback" role="status">Loading tasks…</p>}
+            {!tasksLoading && taskLoadError && <div className="task-feedback task-feedback-error" role="alert"><span>{taskLoadError}</span><button type="button" onClick={retryTaskLoad}>Retry</button></div>}
+            {!tasksLoading && !taskLoadError && tasks.length === 0 && <p className="task-feedback">No tasks yet. Add one to get started.</p>}
+            {!tasksLoading && !taskLoadError && tasks.map((task) => {
+              const isComplete = task.status === 'completed'
+              const taskStatus = task.status === 'in_progress' ? 'In progress' : 'Personal task'
+              const dueLabel = formatDueDate(task.due_at)
+              return <label key={task.id} className={`task-row ${isComplete ? 'task-done' : ''}`}><input type="checkbox" checked={isComplete} disabled={updatingTaskId !== null} onChange={() => void toggleTask(task)} /><span className={`custom-check ${isComplete ? 'checked' : ''}`}>{isComplete && <Check size={12} />}</span><span className="task-color violet" /><span className="task-copy"><strong>{task.title}</strong><small>{taskStatus}</small></span><span className={`task-time ${dueLabel === 'Due today' ? 'due-today' : ''}`}>{dueLabel}</span></label>
+            })}
+          </div>
+          {taskActionError && <p className="task-feedback task-feedback-error" role="alert">{taskActionError}</p>}
+          {showAddTask && <form className="add-task-form" onSubmit={(event) => void addTask(event)}><input autoFocus maxLength={240} value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} placeholder="What needs doing?" aria-label="New task title" disabled={savingTask} /><button type="submit" className="icon-button" aria-label="Save task" disabled={savingTask || !newTaskTitle.trim()}><Check size={16} /></button><button type="button" className="icon-button" aria-label="Cancel" disabled={savingTask} onClick={() => setShowAddTask(false)}>×</button></form>}
           <button className="all-tasks-link" onClick={() => setShowAddTask(true)}>Add a priority <ArrowRight size={14} /></button>
         </section>
       </div>
 
       <section className="coach-nudge"><span className="nudge-icon"><Sparkles size={18} /></span><div><span>YOUR LIFEOS COACH</span><p>Feeling a little behind? You can start with one small thing.</p></div><Link to="/ai-coach" className="coach-nudge-link">Let's make a plan <ArrowRight size={14} /></Link><span className="nudge-decoration">✳</span></section>
-      <div className="dashboard-footnote"><span><ArrowDownRight size={13} /> Demo information only</span><span>Profile and preferences are saved; dashboard activity data will connect in a later feature phase.</span></div>
+      <div className="dashboard-footnote"><span><ArrowDownRight size={13} /> Sample cards</span><span>Tasks, profile, and preferences are saved to your account; the other dashboard cards are examples.</span></div>
     </div>
   )
 }

@@ -1061,6 +1061,32 @@
   margin: 12px 0 7px;
 }
 
+.task-feedback {
+  margin: 8px 0;
+  color: var(--text-faint);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.task-feedback-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #f0a2a2;
+}
+
+.task-feedback-error button {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  font-size: inherit;
+  cursor: pointer;
+}
+
 .task-row {
   display: flex;
   min-height: 47px;
@@ -1196,6 +1222,11 @@
 .add-task-form .icon-button {
   width: 25px;
   height: 25px;
+}
+
+.add-task-form button:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 .coach-nudge {
