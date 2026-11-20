@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Bell,
   Command,
+  LayoutDashboard,
   LogOut,
   Menu,
   Moon,
@@ -10,6 +11,7 @@ import {
   Search,
   Sparkles,
   Sun,
+  CheckSquare,
   X,
 } from 'lucide-react'
 import { navigationGroups, utilityNavigation } from '../data/navigation'
@@ -161,6 +163,28 @@ export function AppShell({ theme, onToggleTheme }: AppShellProps) {
         </header>
         <Outlet />
       </main>
+      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+        <NavLink to="/dashboard" className={({ isActive }) => `mobile-bottom-link ${isActive ? 'active' : ''}`}>
+          <LayoutDashboard size={19} />
+          <span>Home</span>
+        </NavLink>
+        <NavLink to="/planner" className={({ isActive }) => `mobile-bottom-link ${isActive ? 'active' : ''}`}>
+          <CheckSquare size={19} />
+          <span>Tasks</span>
+        </NavLink>
+        <NavLink to="/ai-coach" className={({ isActive }) => `mobile-bottom-link mobile-coach-link ${isActive ? 'active' : ''}`}>
+          <span className="mobile-coach-orb"><Sparkles size={19} /></span>
+          <span>Coach</span>
+        </NavLink>
+        <NavLink to="/notifications" className={({ isActive }) => `mobile-bottom-link ${isActive ? 'active' : ''}`}>
+          <Bell size={19} />
+          <span>Alerts</span>
+        </NavLink>
+        <button type="button" className="mobile-bottom-link" onClick={() => setSearchOpen(true)}>
+          <Search size={19} />
+          <span>Search</span>
+        </button>
+      </nav>
     </div>
   )
 }
