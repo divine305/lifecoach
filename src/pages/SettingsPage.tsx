@@ -19,6 +19,46 @@ export function SettingsPage({ onThemeChange }: { onThemeChange: (theme: 'dark' 
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
+  const [automationEnabled, setAutomationEnabled] = useState(preferences?.automation_enabled ?? false)
+  const [aiSummaryEnabled, setAiSummaryEnabled] = useState(preferences?.ai_weekly_summary_enabled ?? false)
+  const [automationSaving, setAutomationSaving] = useState(false)
+  const [automationError, setAutomationError] = useState<string | null>(null)
+  const [automationSaved, setAutomationSaved] = useState<string | null>(null)
+
+  const saveAutomationSettings = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!supabase || !user) {
+      setAutomationError('Sign in to save automation preferences.')
+      return
+    }
+
+    const form = new FormData(event.currentTarget)
+    const timezone = String(form.get('automation_timezone') ?? '').trim()
+    try {
+      new Intl.DateTimeFormat(undefined, { timeZone: timezone }).format()
+    } catch {
+      setAutomationError('Enter a valid IANA time zone, such as Africa/Lagos or Europe/London.')
+      return
+    }
+
+    setAutomationSaving(true)
+    setAutomationError(null)
+    setAutomationSaved(null)
+    try {
+      const { error } = await supabase.rpc('update_automation_preferences', {
+        p_automation_enabled: automationEnabled,
+        p_ai_weekly_summary_enabled: automationEnabled && aiSummaryEnabled,
+        p_timezone: timezone,
+      })
+      if (error) throw error
+      if (!await refreshProfile()) throw new Error('Your automation settings were saved, but could not be reloaded.')
+      setAutomationSaved('Your automation preferences are saved.')
+    } catch (error: unknown) {
+      setAutomationError(messageFromError(error))
+    } finally {
+      setAutomationSaving(false)
+    }
+  }
 
   const saveSettings = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -91,6 +131,33 @@ export function SettingsPage({ onThemeChange }: { onThemeChange: (theme: 'dark' 
           <div className="settings-actions">
             <button type="submit" className="button button-primary workspace-submit" disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button>
             <Link to="/forgot-password" className="text-button">Reset password</Link>
+          </div>
+        </form>
+      </section>
+      <section className="panel settings-panel automation-panel">
+        <div className="panel-heading"><div><h2>Automations</h2><p>Choose which scheduled LifeOS reminders may be created for your account.</p></div></div>
+        <form className="workspace-form" onSubmit={(event) => void saveAutomationSettings(event)}>
+          <label className="workspace-field settings-checkbox-field">
+            <span>Enable scheduled automations<small>Daily planner digest, due reminders, habit and goal check-ins, and budget alerts.</small></span>
+            <input type="checkbox" checked={automationEnabled} onChange={(event) => {
+              setAutomationEnabled(event.target.checked)
+              if (!event.target.checked) setAiSummaryEnabled(false)
+            }} />
+          </label>
+          <label className="workspace-field settings-checkbox-field">
+            <span>Enable weekly AI summary<small>Only tasks, event titles and times, habit check-ins, and goal progress are sent to OpenAI. Notes, finance records, and profile details are excluded.</small></span>
+            <input type="checkbox" checked={aiSummaryEnabled} disabled={!automationEnabled} onChange={(event) => setAiSummaryEnabled(event.target.checked)} />
+          </label>
+          <label className="workspace-field">
+            <span>Time zone for automations</span>
+            <input name="automation_timezone" required maxLength={80} defaultValue={preferences?.timezone ?? 'UTC'} placeholder="e.g. Africa/Lagos" />
+          </label>
+          {automationError && <p className="workspace-error" role="alert">{automationError}</p>}
+          {automationSaved && <p className="workspace-success" role="status">{automationSaved}</p>}
+          <div className="settings-actions">
+            <button type="submit" className="button button-primary workspace-submit" disabled={automationSaving}>
+              {automationSaving ? 'Saving…' : 'Save automation preferences'}
+            </button>
           </div>
         </form>
       </section>

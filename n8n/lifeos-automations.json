@@ -1,0 +1,63 @@
+{
+  "name": "LifeOS scheduled automations",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "6a89b9c9-30ca-4bfe-ad24-d73793e3cb42",
+      "name": "Run hourly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_PROJECT_REF.supabase.co/functions/v1/lifeos-automation",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"job\": \"tick\" }",
+        "options": {}
+      },
+      "id": "2ca741e8-ad65-4b81-8449-740d6e20f961",
+      "name": "Run LifeOS automations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Run hourly": {
+      "main": [
+        [
+          {
+            "node": "Run LifeOS automations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC"
+  },
+  "versionId": "f9af308f-dbf2-4aa3-95b0-6c389bbfcd3b"
+}

@@ -3,6 +3,21 @@ import { RecordWorkspace } from '../components/RecordWorkspace'
 import { useOwnedRows } from '../lib/ownedRows'
 import { supabase } from '../lib/supabase'
 
+function notificationRoute(actionUrl: string | null) {
+  const allowedRoutes = new Set([
+    '/dashboard',
+    '/planner',
+    '/calendar',
+    '/academics/assignments',
+    '/academics/exams',
+    '/habits',
+    '/goals',
+    '/finance/budgets',
+    '/review',
+  ])
+  return actionUrl && allowedRoutes.has(actionUrl) ? actionUrl : undefined
+}
+
 export function NotificationsPage() {
   const loadNotifications = useCallback(async (userId: string) => {
     if (!supabase) throw new Error('Supabase is not configured.')
@@ -71,6 +86,7 @@ export function NotificationsPage() {
         subtitle: `${reminder.notification_type} · ${new Date(reminder.created_at).toLocaleString()}`,
         detail: reminder.body || undefined,
         status: reminder.read_at ? 'Read' : 'Unread',
+        href: notificationRoute(reminder.action_url),
         checked: Boolean(reminder.read_at),
         toggleLabel: { completed: 'Mark unread', incomplete: 'Mark read' },
       }))}

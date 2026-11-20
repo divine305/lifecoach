@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { AcademicsPage } from './AcademicsPage'
 import { AnalyticsPage } from './AnalyticsPage'
+import { AiCoachPage } from './AiCoachPage'
 import { CalendarPage } from './CalendarPage'
 import { FinancePage } from './FinancePage'
 import { FocusPage } from './FocusPage'
@@ -31,6 +32,6 @@ export function ModulePage({ onThemeChange }: ModulePageProps) {
   if (pathname === '/analytics') return <AnalyticsPage />
   if (pathname === '/settings') return <SettingsPage onThemeChange={onThemeChange} />
   if (pathname === '/review') return <ReviewPage />
-  if (pathname === '/ai-coach') return <Navigate to="/review" replace />
+  if (pathname === '/ai-coach') return <AiCoachPage />
   return <Navigate to="/dashboard" replace />
 }

@@ -1,0 +1,7 @@
+project_id = "lifeos"
+
+[functions.lifeos-automation]
+verify_jwt = false
+
+[functions.lifeos-ai-coach]
+verify_jwt = true

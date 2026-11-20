@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   ClipboardCheck,
   Settings,
+  Sparkles,
   Target,
   Timer,
 } from 'lucide-react'
@@ -34,6 +35,7 @@ export const navigationGroups: { title: string; items: NavigationItem[] }[] = [
   {
     title: 'Your life',
     items: [
+      { label: 'AI Life Coach', path: '/ai-coach', icon: Sparkles },
       { label: 'Academics', path: '/academics', icon: GraduationCap },
       { label: 'Focus mode', path: '/focus', icon: Timer },
       { label: 'Habits', path: '/habits', icon: Activity },

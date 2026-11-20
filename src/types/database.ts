@@ -24,6 +24,8 @@ export type UserPreferencesRow = {
   date_format: string
   week_starts_on: number
   notification_preferences: Json
+  automation_enabled: boolean
+  ai_weekly_summary_enabled: boolean
   created_at: string
   updated_at: string
 }
@@ -32,6 +34,7 @@ export type TaskRow = {
   id: string
   user_id: string
   course_id: string | null
+  ai_proposal_id: string | null
   title: string
   description: string | null
   status: 'todo' | 'in_progress' | 'completed' | 'cancelled'
@@ -61,6 +64,7 @@ export type CalendarEventRow = {
   id: string
   user_id: string
   course_id: string | null
+  ai_proposal_id: string | null
   title: string
   description: string | null
   event_type: 'lecture' | 'study' | 'personal' | 'appointment' | 'deadline'
@@ -135,6 +139,10 @@ export type FocusSessionRow = {
   started_at: string
   ended_at: string | null
   duration_seconds: number | null
+  planned_duration_seconds: number | null
+  remaining_seconds: number | null
+  paused_at: string | null
+  resumed_at: string | null
   session_type: 'focus' | 'short_break' | 'long_break'
   completed: boolean
   created_at: string
@@ -328,6 +336,14 @@ export type Database = {
           p_main_goals: string[]
           p_preferred_currency: string
           p_theme: string
+        }
+        Returns: undefined
+      }
+      update_automation_preferences: {
+        Args: {
+          p_automation_enabled: boolean
+          p_ai_weekly_summary_enabled: boolean
+          p_timezone: string
         }
         Returns: undefined
       }

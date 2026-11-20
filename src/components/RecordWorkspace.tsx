@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { ArrowRight, Check, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export type RecordField = {
   name: string
@@ -21,6 +22,7 @@ export type WorkspaceRecord = {
   subtitle?: string
   detail?: string
   status?: string
+  href?: string
   completed?: boolean
   checked?: boolean
   toggleLabel?: { completed: string; incomplete: string }
@@ -170,6 +172,7 @@ export function RecordWorkspace({
                   {onToggle && <input type="checkbox" aria-label={`${record.checked ?? record.completed ? record.toggleLabel?.completed ?? 'Reopen' : record.toggleLabel?.incomplete ?? 'Complete'} ${record.title}`} checked={Boolean(record.checked ?? record.completed)} onChange={(event) => void toggle(record.id, event.target.checked)} />}
                   <div className="workspace-record-copy"><strong>{record.title}</strong>{record.subtitle && <small>{record.subtitle}</small>}{record.detail && <p>{record.detail}</p>}</div>
                   {record.status && <span className="workspace-record-status">{record.status}</span>}
+                  {record.href && <Link className="text-button workspace-record-link" to={record.href}>Open <ArrowRight size={13} /></Link>}
                   {onUpdate && <button type="button" className="icon-button workspace-delete" aria-label={`Edit ${record.title}`} onClick={() => startEditing(record)}><Pencil size={14} /></button>}
                   {onDelete && <button type="button" className="icon-button workspace-delete" aria-label={`Delete ${record.title}`} onClick={() => void remove(record.id)}><Trash2 size={15} /></button>}
                 </article>
